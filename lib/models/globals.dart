@@ -1,3 +1,3 @@
 class Global {
-  static List addjoke = [];
+  static List<String> storedJokes = [];
 }

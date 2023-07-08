@@ -1,15 +1,11 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:random_joke/controllers/theme_provider.dart';
 import 'package:random_joke/models/globals.dart';
 import 'package:random_joke/models/helpers/api_helper.dart';
-import 'package:random_joke/models/utils/ss_utils.dart';
 import 'package:random_joke/views/screens/save_joke_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../controllers/theme_provider.dart';
 
 class Home_page extends StatefulWidget {
   const Home_page({super.key});
@@ -19,15 +15,41 @@ class Home_page extends StatefulWidget {
 }
 
 class _Home_pageState extends State<Home_page> {
-  String time = " ${DateTime.now().hour} : ${DateTime.now().minute}";
-  String date =
-      " ${DateTime.now().day} / ${DateTime.now().month} / ${DateTime.now().year}";
+  String joke = '';
 
-  Future<void> saveJoke(String joke) async {
-    final prefs = await SharedPreferences.getInstance();
-    final dateTime = DateTime.now().toString();
-    final jokeData = jsonEncode({'joke': joke, 'dateTime': dateTime});
-    prefs.setString(ssave, jokeData);
+  void loadStoredJokes() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? storedJokesList = prefs.getStringList('storedJokes');
+
+    if (storedJokesList != null) {
+      setState(() {
+        Global.storedJokes = storedJokesList;
+      });
+    }
+  }
+
+  void storeJoke() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    DateTime now = DateTime.now();
+    String jokeWithTime =
+        '${now.hour}:${now.minute}\n${now.day}-${now.month}-${now.year}\n\n$joke';
+    Global.storedJokes.add(jokeWithTime);
+    await prefs.setStringList('storedJokes', Global.storedJokes);
+  }
+
+  void navigateToStoredJokesScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (context) =>
+              Save_joke_page(storedJokes: Global.storedJokes)),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadStoredJokes();
   }
 
   @override
@@ -35,22 +57,18 @@ class _Home_pageState extends State<Home_page> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Joke",
+          'Random Joke',
           style: GoogleFonts.aladin(
-              fontSize: 25,
-              letterSpacing: 7,
               fontWeight: FontWeight.bold,
+              letterSpacing: 3,
+              fontSize: 30,
               color: Colors.black),
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => Save_joke_page(date: 'date', time: 'time', joke: ,),
-              ));
-            },
-            icon: const Icon(
-              Icons.library_add_check,
+            onPressed: navigateToStoredJokesScreen,
+            icon: Icon(
+              Icons.list,
               color: Colors.black,
             ),
           ),
@@ -58,7 +76,7 @@ class _Home_pageState extends State<Home_page> {
             onPressed: () {
               Provider.of<ThemeProvider>(context, listen: false).changeTheme();
             },
-            icon: const Icon(
+            icon: Icon(
               Icons.light_mode,
               color: Colors.black,
             ),
@@ -66,159 +84,96 @@ class _Home_pageState extends State<Home_page> {
         ],
         backgroundColor: Colors.orange,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              height: 550,
-              width: 350,
-              decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  image: DecorationImage(
-                      image: AssetImage(
-                        "assets/images/joke2.png",
-                      ),
-                      opacity: 0.2,
-                      scale: 1.8),
-                  borderRadius: BorderRadius.circular(25)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  FutureBuilder(
-                    future: Api_helper.api_helper.getjoke(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Text("{$snapshot.error}");
-                      } else if (snapshot.hasData) {
-                        Map? data = snapshot.data;
-                        return Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Container(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceAround,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Transform.scale(
-                                              scale: 1,
-                                              child: Icon(
-                                                Icons.date_range_outlined,
-                                                size: 18,
-                                                color: Colors.black38,
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              width: 5,
-                                            ),
-                                            Text(date,
-                                                style: GoogleFonts.aladin(
-                                                    fontWeight: FontWeight.bold,
-                                                    letterSpacing: 2,
-                                                    color: Colors.black38))
-                                          ],
-                                        ),
-                                        SizedBox(
-                                          height: 2,
-                                        ),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceAround,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Transform.scale(
-                                              scale: 1,
-                                              child: Icon(
-                                                  Icons.access_time_rounded,
-                                                  size: 18,
-                                                  color: Colors.black38),
-                                            ),
-                                            Text(time,
-                                                style: GoogleFonts.aladin(
-                                                    fontWeight: FontWeight.bold,
-                                                    letterSpacing: 2,
-                                                    color: Colors.black38))
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () {
-                                      Global.addjoke.add(data!['value']);
-                                      Global.addjoke.add(date);
-                                      Global.addjoke.add(time);
-                                    },
-                                    icon: const Icon(
-                                      Icons.save_alt_rounded,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.vertical,
-                              child: Container(
-                                  padding: EdgeInsets.all(10),
-                                  child: Text(
-                                    "${data!['value']}",
-                                    style: GoogleFonts.aladin(
-                                        fontSize: 25,
-                                        color: Colors.black,
-                                        letterSpacing: 3,
-                                        wordSpacing: 6),
-                                  )),
-                            ),
-                          ],
-                        );
-                      } else {
-                        return CircularProgressIndicator();
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {});
-              },
-              child: Container(
-                alignment: Alignment.center,
-                height: 50,
-                width: 350,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                height: 630,
+                width: 380,
                 decoration: BoxDecoration(
-                    color: Colors.orange,
-                    borderRadius: BorderRadius.circular(10)),
-                child: Text(
-                  "Fetch My Laugh",
-                  style: GoogleFonts.aladin(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 25,
-                    letterSpacing: 5,
-                  ),
+                    image: DecorationImage(
+                        image: AssetImage("assets/images/joke2.png"),
+                        opacity: 0.3,
+                        scale: 1.3),
+                    color: Colors.orange.shade300,
+                    borderRadius: BorderRadius.circular(25)),
+                child: FutureBuilder(
+                  future: Api_helper.api_helper.getjoke(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Text("${snapshot.error}");
+                    } else if (snapshot.hasData) {
+                      Map? data = snapshot.data;
+
+                      joke = data!['value'];
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    storeJoke();
+                                  },
+                                  child: Icon(
+                                    Icons.save_alt,
+                                    size: 30,
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              joke,
+                              style: GoogleFonts.aladin(
+                                  fontSize: 30, letterSpacing: 2),
+                            ),
+                          )
+                        ],
+                      );
+                    } else {
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.orange,
+                        ),
+                      );
+                    }
+                  },
                 ),
               ),
-            )
-          ],
+              GestureDetector(
+                onTap: () {
+                  setState(() {});
+                },
+                child: Container(
+                  margin: EdgeInsets.only(top: 5),
+                  alignment: Alignment.center,
+                  height: 60,
+                  width: 380,
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.orange),
+                  child: Text(
+                    "Fetch My Laugh",
+                    style: GoogleFonts.aladin(
+                        fontSize: 30,
+                        letterSpacing: 3,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
